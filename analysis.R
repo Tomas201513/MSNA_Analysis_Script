@@ -18,8 +18,10 @@ for (sheet in sheet_names) {
 print(sheet_names)
 
 df_main <- dataframes1[[2]]
-View(df_main)
+df_educ <- dataframes1[["cleaned_educ"]]
 
+View(df_main)
+View(df_educ)
 # remove environment
 #rm(list=ls())
 
@@ -74,6 +76,7 @@ ex1_results <- create_analysis_t(design = my_example_design, sm_separator = "/")
 #View(ex1_results)
 
 ex1_results[["loa"]] %>% head()
+View(ex1_results[["loa"]])
 
 ex2_results <- create_analysis(design = srvyr::as_survey(my_shorter_df), group_var = "admin1", sm_separator = "/")
 
@@ -85,10 +88,11 @@ ex3_results <- create_analysis(design = srvyr::as_survey(my_shorter_df), group_v
 ex3_results[["loa"]]
 
 ex4_results <- create_analysis(design = srvyr::as_survey(my_shorter_df), group_var = "admin1, admin2", sm_separator = "/")
-
+View(ex4_results)
 loa<- ex4_results[["loa"]]
 #View(ex4_results[["loa"]])
 #View(analysistools_MSNA_template_loa)
+View(loa)
 ex5_results <- create_analysis(design = srvyr::as_survey(my_shorter_df), loa = loa, sm_separator = "/")
 
 ex5_results[["loa"]]
@@ -175,33 +179,118 @@ create_analysis_ratio(me_design,
                       numerator_NA_to_0 = FALSE
 )
 
+### Get number of children aged 5-17 who are attending school ###
+
+# rename columns of df_edu from "_submission__uuid" to "_uuid"
+colnames(df_educ) <- gsub("_submission__uuid", "_uuid", colnames(df_educ))
+#View(df_educ)
+merged_data <- df_educ %>%
+  group_by(`_uuid`) %>%
+  summarise(edu_ind_age_schooling = sum(edu_ind_age_schooling == 1))
+#View(merged_data)
+
+final_data <- df_main %>%
+  left_join(merged_data, by = "_uuid")
+#View(final_data)
+# make NA to 0 for edu_ind_age_schooling
+final_data$edu_ind_age_schooling[is.na(final_data$edu_ind_age_schooling)] <- 0
+View(final_data)
 
 set.seed(8988)
-somedata <- data.frame(
-  groups = rep(c("a", "b"), 50),
-  children_518 = sample(0:5, 100, replace = TRUE),
-  children_enrolled = sample(0:5, 100, replace = TRUE)
-) 
 
-View(somedata)
-
-somedata_ <-somedata %>%
-  dplyr::mutate(children_enrolled = ifelse(children_enrolled > children_518,
-                                           children_518,
-                                           children_enrolled))
-View(somedata_)
-
-somedata[["weights"]] <- ifelse(somedata$groups == "a", 1.33, .67)
-View(somedata)
-
-create_analysis_ratio(srvyr::as_survey(somedata, weights = weights, strata = groups),
+create_analysis_ratio(srvyr::as_survey(final_data, weights = weight, strata = admin1),
                       group_var = NA,
-                      analysis_var_numerator = "children_enrolled",
-                      analysis_var_denominator = "children_518",
+                      analysis_var_numerator = "edu_ind_age_schooling",
+                      analysis_var_denominator = "ind_age_5_17_n",
                       level = 0.95)
 
-create_analysis_ratio(srvyr::as_survey(somedata, weights = weight, strata = groups),
-                      group_var = "groups",
-                      analysis_var_numerator = "children_enrolled",
-                      analysis_var_denominator = "children_518",
+x<-create_analysis_ratio(srvyr::as_survey(final_data, weights = weight, strata = admin1),
+                      group_var = "admin1",
+                      analysis_var_numerator = "edu_ind_age_schooling",
+                      analysis_var_denominator = "ind_age_5_17_n",
                       level = 0.95)
+
+
+View(x)
+
+######################################How_to_review_results#############################################################
+
+
+
+results_to_review <- analysistools::analysistools_MSNA_template_with_ratio_results_table$results_table
+View(results_to_review)
+
+dataset_to_analyse <- analysistools::analysistools_MSNA_template_data
+
+me_analysis <- create_analysis(srvyr::as_survey(final_data),
+                               loa = loa,
+                               sm_separator = "/")
+View(me_analysis)
+
+binded_results <- ex4_results$results_table %>%
+  dplyr::full_join(me_analysis$results_table, by ="analysis_key")
+View(binded_results)
+
+
+
+review_results <- review_analysis(binded_results, 
+                                  stat_columns_to_review = c("stat.x", "stat_low.x", "stat_upp.x"),
+                                  stat_columns_to_compare_with = c("stat.y", "stat_low.y", "stat_upp.y"))
+
+review_results$review_table %>%
+  dplyr::group_by(stat) %>%
+  dplyr::summarise(prop_correct = mean(review_check))
+
+
+review_results$review_table %>%
+  dplyr::group_by(stat, review_comment) %>%
+  dplyr::tally(sort = T)
+
+review_results$review_table %>%
+  dplyr::filter(!review_check) %>%
+  dplyr::select(analysis_type,analysis_var,group_var) %>% 
+  dplyr::distinct()
+
+
+analysis_key_column <-  c("mean @/@ income %/% NA @/@ NA %/% NA",
+                          "prop_select_one @/@ water_source %/% tap_water @/@ district %/% district_a",
+                          "prop_select_one @/@ water_source %/% tap_water @/@ district %/% district_a -/- population %/% displaced",
+                          "prop_select_multiple @/@ source_information %/% relatives @/@ NA %/% NA")
+test_analysis_results <- data.frame(
+  test = c(
+    "test equality",
+    "test difference",
+    "test Missing in y",
+    "test Missing in x"
+  ),
+  stat_col.x = c(0, 1, 2, NA),
+  stat_col.y = c(0, 2, NA, 3),
+  analysis_key = analysis_key_column
+)
+review_results2 <- review_analysis(test_analysis_results,
+                                   stat_columns_to_review = "stat_col.x",
+                                   stat_columns_to_compare_with = "stat_col.y")
+review_results2$review_table %>%
+  dplyr::group_by(stat) %>%
+  dplyr::summarise(prop_correct = mean(review_check))
+
+review_results2$review_table %>%
+  dplyr::group_by(stat, review_comment) %>%
+  dplyr::tally(sort = T)
+
+review_results2$review_table %>%
+  dplyr::filter(!review_check) %>%
+  dplyr::select(review_check, analysis_type,analysis_var,group_var) %>% 
+  dplyr::distinct()
+
+resultstable <- data.frame(analysis_index = c(
+  "mean @/@ v1 %/% NA @/@ NA %/% NA",
+  "mean @/@ v1 %/% NA @/@ gro %/% A",
+  "mean @/@ v1 %/% NA @/@ gro %/% B"
+))
+
+key_table <- create_analysis_key_table(resultstable, "analysis_index")
+key_table
+
+
+unite_variables(key_table)
