@@ -46,26 +46,29 @@ View(my_shorter_df)
 my_shorter_df[ , sapply(my_shorter_df, is.numeric)][is.na(my_shorter_df[ , sapply(my_shorter_df, is.numeric)])] <- 0
 View(my_shorter_df)
 
-
-my_example_sample <- data.frame(
-  strata = c("ET01", "ET02", "ET04","ET06","ET16","ET08"),
-  population = c(30000, 50000, 80000,80000,80000,80000)
-)
+# my_example_sample <- data.frame(
+#   strata = c("ET01", "ET02", "ET04","ET06","ET16","ET08"),
+#   population = c(30000, 50000, 280000,180000,800000,80000)
+# )
 #View(example_sample)
 
-my_weighted_shorter_df <- my_shorter_df %>%
-  add_weights(my_example_sample,
-              strata_column_dataset = "admin1",
-              strata_column_sample = "strata",
-              population_column = "population"
-  )
+# my_weighted_shorter_df <- my_shorter_df %>%
+#   add_weights(my_example_sample,
+#               strata_column_dataset = "admin1",
+#               strata_column_sample = "strata",
+#               population_column = "population")
+# 
+# View(my_weighted_shorter_df)
+# 
+# my_weighted_shorter_df[, c("admin1", "weights")] %>% head()
+
 #View(my_weighted_shorter_df)
 
-my_weighted_shorter_df[, c("admin1", "weights")] %>% head()
-#View(my_weighted_shorter_df)
-
-my_example_design <- srvyr::as_survey(my_weighted_shorter_df, strata = admin1, weights = weights)
-#View(my_example_design)
+#drop column that dont have any value
+my_shorter_df <- my_shorter_df %>% select(which(colSums(is.na(my_shorter_df)) != nrow(my_shorter_df)))
+View(my_shorter_df)
+my_example_design <- srvyr::as_survey(my_shorter_df, strata = admin1, weights = weight)
+View(my_example_design)
 
 ex1_results <- create_analysis_t(design = my_example_design, sm_separator = "/")
 #View(ex1_results)
@@ -75,6 +78,7 @@ ex1_results[["loa"]] %>% head()
 ex2_results <- create_analysis(design = srvyr::as_survey(my_shorter_df), group_var = "admin1", sm_separator = "/")
 
 ex2_results[["loa"]]
+View(ex2_results)
 
 ex3_results <- create_analysis(design = srvyr::as_survey(my_shorter_df), group_var = c("admin1", "admin2"), sm_separator = "/")
 
@@ -102,20 +106,24 @@ ex5_results[["loa"]]
 # View(me_design)
 
 ###my_example_design <- srvyr::as_survey(my_weighted_shorter_df, strata = admin1, weights = weights)
-me_design_w <- srvyr::as_survey(my_weighted_shorter_df)
+me_design_w <- srvyr::as_survey(my_shorter_df)
 create_analysis_mean(me_design_w, analysis_var = "cm_income_source_salaried_n")
 create_analysis_mean(me_design_w,group_var = "admin1", analysis_var = "cm_income_source_salaried_n")
 create_analysis_median(me_design_w, analysis_var = "cm_income_source_salaried_n")
 create_analysis_median(me_design_w,group_var = "admin1", analysis_var = "cm_income_source_salaried_n")
 
-my_shorter_df_W <- srvyr::as_survey(my_weighted_shorter_df, weights = weights)
+#View(my_shorter_df)
+
+my_shorter_df_W <- srvyr::as_survey(my_shorter_df, weights = weight)
 create_analysis_mean(my_shorter_df_W, analysis_var = "cm_income_source_salaried_n")
 create_analysis_mean(my_shorter_df_W, group_var = "admin1", analysis_var = "cm_income_source_salaried_n")
 create_analysis_median(my_shorter_df_W, analysis_var = "cm_income_source_salaried_n")
 create_analysis_median(my_shorter_df_W, group_var = "admin1", analysis_var = "cm_income_source_salaried_n")
 
 
-View(my_shorter_df)
+#View(my_shorter_df)
+
+###############################_Proportion_Select_One_###################################################
 
 create_analysis_prop_select_one(srvyr::as_survey(my_shorter_df, strata = admin1),
                                 group_var = NA,
@@ -133,7 +141,6 @@ create_analysis_prop_select_one(srvyr::as_survey(my_shorter_df, strata = admin1)
 
 # replace column names that are separated by / with "."
 colnames(my_shorter_df) <- gsub("/", ".", colnames(my_shorter_df))
-
 #colnames(my_shorter_df)
 #View(my_shorter_df)
 
@@ -152,27 +159,19 @@ create_analysis_prop_select_multiple(srvyr::as_survey(my_shorter_df),
 )
 
 
-# Ratio
+########################################_Ratio_###############################################################
 
-school_ex <- data.frame(
-  hh = c("hh1", "hh2", "hh3", "hh4"),
-  num_children = c(3, 0, 2, NA),
-  num_enrolled = c(3, NA, 0, NA),
-  num_attending = c(1, NA, NA, NA),
-  group = c("a", "a", "b", "b")
-)
-View(school_ex)
-me_design <- srvyr::as_survey(school_ex)
-View(me_design)
+me_design <- srvyr::as_survey(my_shorter_df)
+#View(me_design)
 
 create_analysis_ratio(me_design,
-                      analysis_var_numerator = "num_attending",
-                      analysis_var_denominator = "num_children"
+                      analysis_var_numerator = "ind_age_schooling_n",
+                      analysis_var_denominator = "hh_size",
 )
 
 create_analysis_ratio(me_design,
-                      analysis_var_numerator = "num_attending",
-                      analysis_var_denominator = "num_children",
+                      analysis_var_numerator = "ind_age_schooling_n",
+                      analysis_var_denominator = "hh_size",
                       numerator_NA_to_0 = FALSE
 )
 
@@ -182,23 +181,27 @@ somedata <- data.frame(
   groups = rep(c("a", "b"), 50),
   children_518 = sample(0:5, 100, replace = TRUE),
   children_enrolled = sample(0:5, 100, replace = TRUE)
-) %>%
+) 
+
+View(somedata)
+
+somedata_ <-somedata %>%
   dplyr::mutate(children_enrolled = ifelse(children_enrolled > children_518,
                                            children_518,
-                                           children_enrolled
-  ))
-View(somedata)
+                                           children_enrolled))
+View(somedata_)
+
 somedata[["weights"]] <- ifelse(somedata$groups == "a", 1.33, .67)
+View(somedata)
 
 create_analysis_ratio(srvyr::as_survey(somedata, weights = weights, strata = groups),
                       group_var = NA,
                       analysis_var_numerator = "children_enrolled",
                       analysis_var_denominator = "children_518",
-                      level = 0.95
-)
-create_analysis_ratio(srvyr::as_survey(somedata, weights = weights, strata = groups),
+                      level = 0.95)
+
+create_analysis_ratio(srvyr::as_survey(somedata, weights = weight, strata = groups),
                       group_var = "groups",
                       analysis_var_numerator = "children_enrolled",
                       analysis_var_denominator = "children_518",
-                      level = 0.95
-)
+                      level = 0.95)
