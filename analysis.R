@@ -18,28 +18,34 @@ for (sheet in sheet_names) {
 print(sheet_names)
 
 df_main <- dataframes1[[2]]
-#View(df_main)
+View(df_main)
 
 # remove environment
 #rm(list=ls())
 
-my_shorter_df <- df_main[, c(
-  "admin1",
-  "admin2",
-  "cm_income_source_salaried_n",
-  "wash_drinking_water_source", 
-  grep("edu_community_modality", names(df_main), value = T)
-)]
+my_shorter_df <- df_main
+View(my_shorter_df)
+# my_shorter_df <- df_main[, c(
+#   "_uuid",
+#   "admin1",
+#   "admin2",
+#   "hh_size",
+#   "ind_age_schooling_n",
+#   "cm_income_source_salaried_n",
+#   "wash_drinking_water_source", 
+#   grep("edu_community_modality", names(df_main), value = T)
+# )]
 #View(my_shorter_df)
-paste0(unique(df_main$admin1))
+#paste0(unique(df_main$admin1))
 
 # drop column that end with _other or /other 
-my_shorter_df <- my_shorter_df %>% select(-ends_with("_other"), -ends_with("/other"))
+#my_shorter_df <- my_shorter_df %>% select(-ends_with("_other"), -ends_with("/other"))
 #View(my_shorter_df)
 
 # convert columns which numeric with value NA to 0 and those column which are character with value NA to "NA"
 my_shorter_df[ , sapply(my_shorter_df, is.numeric)][is.na(my_shorter_df[ , sapply(my_shorter_df, is.numeric)])] <- 0
-#View(my_shorter_df)
+View(my_shorter_df)
+
 
 my_example_sample <- data.frame(
   strata = c("ET01", "ET02", "ET04","ET06","ET16","ET08"),
@@ -53,7 +59,7 @@ my_weighted_shorter_df <- my_shorter_df %>%
               strata_column_sample = "strata",
               population_column = "population"
   )
-View(my_weighted_shorter_df)
+#View(my_weighted_shorter_df)
 
 my_weighted_shorter_df[, c("admin1", "weights")] %>% head()
 #View(my_weighted_shorter_df)
@@ -77,12 +83,11 @@ ex3_results[["loa"]]
 ex4_results <- create_analysis(design = srvyr::as_survey(my_shorter_df), group_var = "admin1, admin2", sm_separator = "/")
 
 loa<- ex4_results[["loa"]]
-View(ex4_results[["loa"]])
-View(analysistools_MSNA_template_loa)
+#View(ex4_results[["loa"]])
+#View(analysistools_MSNA_template_loa)
 ex5_results <- create_analysis(design = srvyr::as_survey(my_shorter_df), loa = loa, sm_separator = "/")
 
 ex5_results[["loa"]]
-
 
 
 # somedata <- data.frame(
@@ -110,83 +115,90 @@ create_analysis_median(my_shorter_df_W, analysis_var = "cm_income_source_salarie
 create_analysis_median(my_shorter_df_W, group_var = "admin1", analysis_var = "cm_income_source_salaried_n")
 
 
+View(my_shorter_df)
 
-
-# Proportion_ Select_One
-
-somedata <- data.frame(
-  groups = sample(c("group_a", "group_b"),
-                  size = 100,
-                  replace = TRUE
-  ),
-  value = sample(c("a", "b", "c"),
-                 size = 100, replace = TRUE,
-                 prob = c(.6, .4, .1)
-  )
-)
-View(somedata)
 create_analysis_prop_select_one(srvyr::as_survey(my_shorter_df, strata = admin1),
                                 group_var = NA,
                                 analysis_var = "wash_drinking_water_source",
-                                level = .95
-)
+                                level = .95)
 
 create_analysis_prop_select_one(srvyr::as_survey(my_shorter_df, strata = admin1),
                                 group_var = "admin1",
                                 analysis_var = "wash_drinking_water_source",
-                                level = .95
-)
+                                level = .95)
 
 
 
+###############################_Proportion_Select_Multiple_###################################################
 
-# Proportion_ Select_Multiple
+# replace column names that are separated by / with "."
+colnames(my_shorter_df) <- gsub("/", ".", colnames(my_shorter_df))
 
-somedata <- data.frame(
-  groups = sample(c("group_a", "group_b"), size = 100, replace = T),
-  smvar = rep(NA_character_, 100),
-  smvar.option1 = sample(c(TRUE, FALSE), size = 100, replace = T, prob = c(.7, .3)),
-  smvar.option2 = sample(c(TRUE, FALSE), size = 100, replace = T, prob = c(.6, .4)),
-  smvar.option3 = sample(c(TRUE, FALSE), size = 100, replace = T, prob = c(.1, .9)),
-  smvar.option4 = sample(c(TRUE, FALSE), size = 100, replace = T, prob = c(.8, .2)),
-  uuid = 1:100 %>% as.character()
-) %>%
-  cleaningtools::recreate_parent_column(uuid = "uuid", sm_separator = ".")
-
-somedata <- somedata$data_with_fix_concat
-View(somedata)
-
-View(my_shorter_df)
-# makeedu_community_modality where its value is NA to "NA"
-my_shorter_df[ , sapply(my_shorter_df, is.character)][is.na(my_shorter_df[ , sapply(my_shorter_df, is.character)])] <- "na"
-View(my_shorter_df)
-
-x= "none oms improve_pcosi improve_cowis improve_ss provide_twtpocrt  support_for_enrolment increase_tp increase_qt change_curriculum provide_edu awareness_raising school_feeding dnk pnta provide_class provide_mhealth provide_ssupplies provide_cash provide_transportation improve_access"
-
-# make x array of strings
-x <- x %>% str_split(" ") %>% unlist()
-paste0(x)
-# count the number of comma separated values in x
-length(strsplit(x, ",")[[1]])
-# find all the uniq values in my_shorter_df$edu_community_modality treat space as a separator and make them array of strings
-y=unique(my_shorter_df$edu_community_modality) %>% str_split(" ") %>% unlist() %>% unique()
-paste0(y)
-
-# make y array of strings
-y <- y %>% str_split(" ") %>% unlist()
-paste0(y)
+#colnames(my_shorter_df)
+#View(my_shorter_df)
 
 
-
-source("create_analysis_prop_select_multiple_t.R")
-create_analysis_prop_select_multiple_t(srvyr::as_survey(my_shorter_df),
+#source("create_analysis_prop_select_multiple_t.R")
+create_analysis_prop_select_multiple(srvyr::as_survey(my_shorter_df),
                                      group_var = NA,
                                      analysis_var = "edu_community_modality",
-                                     level = 0.95
-)
+                                     level = 0.95)
+
 
 create_analysis_prop_select_multiple(srvyr::as_survey(my_shorter_df),
                                      group_var = "admin1",
                                      analysis_var = "edu_community_modality",
                                      level = 0.95
+)
+
+
+# Ratio
+
+school_ex <- data.frame(
+  hh = c("hh1", "hh2", "hh3", "hh4"),
+  num_children = c(3, 0, 2, NA),
+  num_enrolled = c(3, NA, 0, NA),
+  num_attending = c(1, NA, NA, NA),
+  group = c("a", "a", "b", "b")
+)
+View(school_ex)
+me_design <- srvyr::as_survey(school_ex)
+View(me_design)
+
+create_analysis_ratio(me_design,
+                      analysis_var_numerator = "num_attending",
+                      analysis_var_denominator = "num_children"
+)
+
+create_analysis_ratio(me_design,
+                      analysis_var_numerator = "num_attending",
+                      analysis_var_denominator = "num_children",
+                      numerator_NA_to_0 = FALSE
+)
+
+
+set.seed(8988)
+somedata <- data.frame(
+  groups = rep(c("a", "b"), 50),
+  children_518 = sample(0:5, 100, replace = TRUE),
+  children_enrolled = sample(0:5, 100, replace = TRUE)
+) %>%
+  dplyr::mutate(children_enrolled = ifelse(children_enrolled > children_518,
+                                           children_518,
+                                           children_enrolled
+  ))
+View(somedata)
+somedata[["weights"]] <- ifelse(somedata$groups == "a", 1.33, .67)
+
+create_analysis_ratio(srvyr::as_survey(somedata, weights = weights, strata = groups),
+                      group_var = NA,
+                      analysis_var_numerator = "children_enrolled",
+                      analysis_var_denominator = "children_518",
+                      level = 0.95
+)
+create_analysis_ratio(srvyr::as_survey(somedata, weights = weights, strata = groups),
+                      group_var = "groups",
+                      analysis_var_numerator = "children_enrolled",
+                      analysis_var_denominator = "children_518",
+                      level = 0.95
 )
