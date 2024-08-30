@@ -9,6 +9,9 @@ library(stringr)
 library(analysistools)
 source("create_analysis_t.R")
 
+# remove environment
+#rm(list=ls())
+
 file_path="C:/Users/test/Downloads/20240826_ETH2403_eth_msna_cleaned_data_NEW.xlsx"
 print(file_path)
 sheet_names <- excel_sheets(file_path)
@@ -17,16 +20,15 @@ for (sheet in sheet_names) {
   dataframes1[[sheet]] <- read_excel(file_path, sheet = sheet)}
 print(sheet_names)
 
-df_main <- dataframes1[[2]]
+df_main <- dataframes1[["cleaned_data"]]
 df_educ <- dataframes1[["cleaned_educ"]]
 
-View(df_main)
-View(df_educ)
-# remove environment
-#rm(list=ls())
+#View(df_main)
+#View(df_educ)
 
 my_shorter_df <- df_main
-View(my_shorter_df)
+#View(my_shorter_df)
+
 # my_shorter_df <- df_main[, c(
 #   "_uuid",
 #   "admin1",
@@ -46,7 +48,7 @@ View(my_shorter_df)
 
 # convert columns which numeric with value NA to 0 and those column which are character with value NA to "NA"
 my_shorter_df[ , sapply(my_shorter_df, is.numeric)][is.na(my_shorter_df[ , sapply(my_shorter_df, is.numeric)])] <- 0
-View(my_shorter_df)
+#View(my_shorter_df)
 
 # my_example_sample <- data.frame(
 #   strata = c("ET01", "ET02", "ET04","ET06","ET16","ET08"),
@@ -68,31 +70,33 @@ View(my_shorter_df)
 
 #drop column that dont have any value
 my_shorter_df <- my_shorter_df %>% select(which(colSums(is.na(my_shorter_df)) != nrow(my_shorter_df)))
-View(my_shorter_df)
+#View(my_shorter_df)
 my_example_design <- srvyr::as_survey(my_shorter_df, strata = admin1, weights = weight)
-View(my_example_design)
+#View(my_example_design)
 
 ex1_results <- create_analysis_t(design = my_example_design, sm_separator = "/")
 #View(ex1_results)
 
 ex1_results[["loa"]] %>% head()
-View(ex1_results[["loa"]])
+#View(ex1_results[["loa"]])
 
 ex2_results <- create_analysis(design = srvyr::as_survey(my_shorter_df), group_var = "admin1", sm_separator = "/")
 
 ex2_results[["loa"]]
-View(ex2_results)
+#View(ex2_results)
 
 ex3_results <- create_analysis(design = srvyr::as_survey(my_shorter_df), group_var = c("admin1", "admin2"), sm_separator = "/")
 
 ex3_results[["loa"]]
+loa<- ex3_results[["loa"]]
+
 
 ex4_results <- create_analysis(design = srvyr::as_survey(my_shorter_df), group_var = "admin1, admin2", sm_separator = "/")
-View(ex4_results)
+#View(ex4_results)
 loa<- ex4_results[["loa"]]
 #View(ex4_results[["loa"]])
 #View(analysistools_MSNA_template_loa)
-View(loa)
+#View(loa)
 ex5_results <- create_analysis(design = srvyr::as_survey(my_shorter_df), loa = loa, sm_separator = "/")
 
 ex5_results[["loa"]]
@@ -292,5 +296,6 @@ resultstable <- data.frame(analysis_index = c(
 key_table <- create_analysis_key_table(resultstable, "analysis_index")
 key_table
 
+View(key_table)
 
 unite_variables(key_table)
